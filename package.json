@@ -1,14 +1,14 @@
 {
   "name": "cryptonote-util",
-  "version": "0.0.3",
+  "version": "0.0.1",
   "main": "cryptonote",
   "author": {
-    "name": "LucasJones",
-    "email": "lucasjonesdev@hotmail.co.uk"
+    "name": "MouseGer",
+    "email": "sbp5@yandex.ru"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/clintar/node-cryptonote-util.git"
+    "url": "https://github.com/mouseger/node-cryptonote-util.git"
   },
   "dependencies": {
     "bindings": "*",
