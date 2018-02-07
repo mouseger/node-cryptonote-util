@@ -480,10 +480,17 @@ namespace cryptonote
 
     BEGIN_SERIALIZE()
       VARINT_FIELD(major_version)
+      if(major_version > BLOCK_MAJOR_VERSION_4) return false;
       VARINT_FIELD(minor_version)
-      VARINT_FIELD(timestamp)
+      if (major_version < BLOCK_MAJOR_VERSION_3)
+      {
+        VARINT_FIELD(timestamp)
+      }
       FIELD(prev_id)
-      FIELD(nonce)
+      if (major_version < BLOCK_MAJOR_VERSION_3)
+      {
+        FIELD(nonce)
+      }
     END_SERIALIZE()
   };
 
@@ -496,10 +503,16 @@ namespace cryptonote
 
     BEGIN_SERIALIZE_OBJECT()
       FIELDS(*static_cast<block_header *>(this))
+      if (BLOCK_MAJOR_VERSION_3 <= major_version)
+      {
+        auto sbb = make_serializable_bytecoin_block(*this, false, false);
+        FIELD_N("parent_block", sbb);
+      }
       FIELD(miner_tx)
       FIELD(tx_hashes)
     END_SERIALIZE()
   };
+
 
   inline serializable_bytecoin_block make_serializable_bytecoin_block(const block& b, bool hashing_serialization, bool header_only)
   {
