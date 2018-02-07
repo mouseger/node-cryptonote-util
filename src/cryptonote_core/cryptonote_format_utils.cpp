@@ -698,12 +698,24 @@ namespace cryptonote
     blob.append(tools::get_varint_data(b.tx_hashes.size()+1));
     return blob;
   }
-  //---------------------------------------------------------------
+  
+  
+   //---------------------------------------------------------------
   bool get_block_hash(const block& b, crypto::hash& res)
   {
     blobdata blob;
     if (!get_block_hashing_blob(b, blob))
       return false;
+
+    if (BLOCK_MAJOR_VERSION_3 <= b.major_version)
+    {
+      blobdata parent_blob;
+      auto sbb = make_serializable_bytecoin_block(b, true, false);
+      if (!t_serializable_object_to_blob(sbb, parent_blob))
+        return false;
+
+      blob.append(parent_blob);
+    }
 
     return get_object_hash(blob, res);
   }
@@ -737,12 +749,14 @@ namespace cryptonote
     std::string hex_tx_represent = string_tools::buff_to_hex_nodelimer(txb);
 
     //hard code coinbase tx in genesis block, because "tru" generating tx use random, but genesis should be always the same
-    std::string genesis_coinbase_tx_hex = "013c01ff0001ffffffffffff03029b2e4c0281c0b02e7c53291a94d1d0cbff8883f8024f5142ee494ffbbd08807121017767aafcde9be00dcfd098715ebcf7f410daebc582fda69d24a28e9d0bc890d1";
+    std::string genesis_coinbase_tx_hex = "010101ff00002101f0c11cb027ca12cb2b52d82bbe1851432ca1aabc5362375cddfb1c9606a8d135";
 
     blobdata tx_bl;
     string_tools::parse_hexstr_to_binbuff(genesis_coinbase_tx_hex, tx_bl);
     bool r = parse_and_validate_tx_from_blob(tx_bl, bl.miner_tx);
     CHECK_AND_ASSERT_MES(r, false, "failed to parse coinbase tx from hard coded blob");
+    bl.major_version = CURRENT_BLOCK_MAJOR_VERSION;
+    bl.minor_version = CURRENT_BLOCK_MINOR_VERSION;
     bl.timestamp = 0;
     bl.nonce = 10000;
     miner::find_nonce_for_given_block(bl, 1, 0);
@@ -825,7 +839,7 @@ namespace cryptonote
     ss << b_blob;
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, b);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob");
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob __1__");
     return true;
   }
   bool parse_and_validate_block_from_blob(const blobdata& b_blob, bb_block& b)
@@ -834,7 +848,7 @@ namespace cryptonote
     ss << b_blob;
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, b);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob");
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse block from blob __2__");
     return true;
   }
   //---------------------------------------------------------------
@@ -894,6 +908,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool check_proof_of_work_v1(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
   {
+    if (BLOCK_MAJOR_VERSION_1 != bl.major_version)
+      return false;
 
     proof_of_work = get_block_longhash(bl, 0);
     return check_hash(proof_of_work, current_diffic);
@@ -901,6 +917,8 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool check_proof_of_work_v2(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
   {
+    if (BLOCK_MAJOR_VERSION_2 != bl.major_version || BLOCK_MAJOR_VERSION_3 != bl.major_version)
+      return false;
 
     if (!get_bytecoin_block_longhash(bl, proof_of_work))
       return false;
@@ -935,6 +953,16 @@ namespace cryptonote
   //---------------------------------------------------------------
   bool check_proof_of_work(const block& bl, difficulty_type current_diffic, crypto::hash& proof_of_work)
   {
+    switch (bl.major_version)
+    {
+    case BLOCK_MAJOR_VERSION_1: return check_proof_of_work_v1(bl, current_diffic, proof_of_work);
+    case BLOCK_MAJOR_VERSION_2: return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
+    case BLOCK_MAJOR_VERSION_3: return check_proof_of_work_v2(bl, current_diffic, proof_of_work);
+    }
+
+    CHECK_AND_ASSERT_MES(false, false, "unknown block major version: " << bl.major_version << "." << bl.minor_version);
   }
   //---------------------------------------------------------------
 }
+
+
