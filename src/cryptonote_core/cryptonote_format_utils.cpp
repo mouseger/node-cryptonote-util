@@ -37,7 +37,7 @@ namespace cryptonote
     ss << tx_blob;
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, tx);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob");
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob __1__");
     return true;
   }
   //---------------------------------------------------------------
@@ -47,7 +47,7 @@ namespace cryptonote
     ss << tx_blob;
     binary_archive<false> ba(ss);
     bool r = ::serialization::serialize(ba, tx);
-    CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob");
+    CHECK_AND_ASSERT_MES(r, false, "Failed to parse transaction from blob __2__");
     //TODO: validate tx
 
     crypto::cn_fast_hash(tx_blob.data(), tx_blob.size(), tx_hash);
@@ -791,8 +791,20 @@ namespace cryptonote
   bool get_block_longhash(const block& b, crypto::hash& res, uint64_t height)
   {
     blobdata bd;
-    if(!get_block_hashing_blob(b, bd))
-      return false;
+
+    if (b.major_version < BLOCK_MAJOR_VERSION_3)
+    {
+      if(!get_block_hashing_blob(b, bd))
+        return false;
+    } else if (b.major_version >= BLOCK_MAJOR_VERSION_3)
+    {
+      auto sbb = make_serializable_bytecoin_block(b, true, true);
+      if (!t_serializable_object_to_blob(sbb, bd))
+        return false;
+    } else {
+        return false;
+    }
+     
     crypto::cn_slow_hash(bd.data(), bd.size(), res);
     return true;
   }
